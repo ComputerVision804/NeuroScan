@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Tumor Classifier</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f4f7f6;
+            transition: background-color 0.3s ease;
+            margin: 0;
+            padding: 0;
+        }
+        .dark-mode {
+            background-color: #2c2c2c;
+            color: #f1f1f1;
+        }
+        h1 {
+            color: #333;
+            text-transform: uppercase;
+            margin-top: 30px;
+            font-size: 36px;
+            letter-spacing: 2px;
+        }
+        .toggle-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        .toggle-button {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .toggle-button:hover {
+            background-color: #0056b3;
+        }
+        .upload-container {
+            margin: 50px auto;
+            padding: 40px;
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 600px;
+            transition: transform 0.3s ease;
+        }
+        .upload-container:hover {
+            transform: scale(1.05);
+        }
+        .drop-zone {
+            border: 2px dashed #007bff;
+            padding: 50px;
+            cursor: pointer;
+            border-radius: 15px;
+            background-color: #f9f9f9;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        .drop-zone:hover {
+            background-color: #e9e9e9;
+            transform: scale(1.05);
+        }
+        .file-name {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #555;
+            font-weight: 600;
+        }
+        .submit-button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        .submit-button:hover {
+            background-color: #0056b3;
+            transform: translateY(-3px);
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .prediction-result {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #e2e8f0;
+            border-radius: 10px;
+            display: none;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        }
+        .prediction-result h3 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .prediction-result ul {
+            list-style: none;
+        }
+        .prediction-result ul li {
+            font-size: 16px;
+            color: #333;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 30px;
+        }
+        .loading img {
+            width: 40px;
+            height: 40px;
+        }
+        .save-buttons {
+            margin-top: 20px;
+        }
+        .save-buttons button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .save-buttons button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="toggle-container">
+        <button class="toggle-button" id="toggle-button">🌙 Dark Mode</button>
+    </div>
+
+    <h1>Brain Tumor Classifier</h1>
+
+    <div class="upload-container">
+        <div id="drop-zone" class="drop-zone">
+            Drag and drop an image here or click to upload
+        </div>
+        <div class="file-name" id="file-name"></div>
+        <button id="submit-button" class="submit-button" disabled>Predict</button>
+        <div id="error-message" class="error"></div>
+        <div id="prediction-result" class="prediction-result"></div>
+        <div id="loading" class="loading">
+            <img src="https://i.gifer.com/7vC4.gif" alt="Loading..."> <!-- Loading spinner -->
+        </div>
+        <div id="save-buttons" class="save-buttons" style="display: none;">
+            <button id="save-text" onclick="saveAsText()">Save as Text</button>
+            <button id="save-image" onclick="saveAsImage()">Save as Image</button>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileNameDisplay = document.getElementById('file-name');
+        const submitButton = document.getElementById('submit-button');
+        const errorMessage = document.getElementById('error-message');
+        const predictionResult = document.getElementById('prediction-result');
+        const loadingSpinner = document.getElementById('loading');
+        const saveButtons = document.getElementById('save-buttons');
+        let selectedFile = null;
+
+        // Dark Mode Toggle
+        const toggleButton = document.getElementById('toggle-button');
+        let isDarkMode = false;
+        toggleButton.addEventListener('click', () => {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            toggleButton.textContent = isDarkMode ? '🌞 Light Mode' : '🌙 Dark Mode';
+        });
+
+        // Drag & Drop Event Listeners
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.backgroundColor = "#e9e9e9";
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.backgroundColor = "#f9f9f9";
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.backgroundColor = "#f9f9f9";
+            selectedFile = e.dataTransfer.files[0];
+            handleFile(selectedFile);
+        });
+
+        // File Input Click Trigger
+        dropZone.addEventListener('click', () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.addEventListener('change', (e) => {
+                selectedFile = e.target.files[0];
+                handleFile(selectedFile);
+            });
+            fileInput.click();
+        });
+
+        function handleFile(file) {
+            if (file && file.type.startsWith('image/')) {
+                fileNameDisplay.textContent = `File: ${file.name}`;
+                submitButton.disabled = false;
+                errorMessage.textContent = '';
+            } else {
+                fileNameDisplay.textContent = '';
+                submitButton.disabled = true;
+                errorMessage.textContent = 'Please upload a valid image file (JPG/PNG).';
+            }
+        }
+
+        submitButton.addEventListener('click', async () => {
+            loadingSpinner.style.display = 'block';
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                loadingSpinner.style.display = 'none';
+
+                if (data.error) {
+                    predictionResult.style.display = 'none';
+                    errorMessage.textContent = data.error;
+                } else {
+                    errorMessage.textContent = '';
+                    predictionResult.style.display = 'block';
+                    predictionResult.innerHTML = `
+                        <h3>Prediction: ${data.prediction}</h3>
+                        <p>Probabilities:</p>
+                        <ul>
+                            ${Object.entries(data.probabilities).map(([className, prob]) => `<li>${className}: ${prob.toFixed(4)}</li>`).join('')}
+                        </ul>
+                    `;
+                    saveButtons.style.display = 'block'; // Show the save buttons
+                }
+            } catch (error) {
+                loadingSpinner.style.display = 'none';
+                errorMessage.textContent = 'Error during prediction. Please try again.';
+            }
+        });
+
+        // Save as Text Function
+        function saveAsText() {
+            const textContent = `
+Prediction: ${predictionResult.querySelector('h3').textContent}
+Probabilities:
+${Array.from(predictionResult.querySelectorAll('ul li')).map(li => li.textContent).join('\n')}
+            `;
+            const blob = new Blob([textContent], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'prediction_results.txt';
+            link.click();
+        }
+
+        // Save as Image Function
+        function saveAsImage() {
+            html2canvas(predictionResult).then(canvas => {
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL();
+                link.download = 'prediction_results.png';
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>
