@@ -11,6 +11,8 @@ Pituitary
 No Tumor
 
 The application utilizes a convolutional neural network (CNN) trained on medical image datasets, which has been implemented using TensorFlow and Keras.
+![prediction_1245b3a4](https://github.com/user-attachments/assets/aff448dc-e6d3-4ce5-90ec-f57ab21aa958)
+![prediction_b661fc31](https://github.com/user-attachments/assets/fe9ed940-9451-430d-902c-40ae3bc73bd4)
 
 Features:
 File Upload: Users can upload an image of the brain for classification.
